@@ -109,7 +109,7 @@ jobs:
       - name: Create pull request
         if: steps.check.outputs.skip == 'false'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           BRANCH="bump-cask-${VERSION}"
