@@ -16,14 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Determine version
         id: version
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
             VERSION="${{ github.event.client_payload.version }}"
@@ -60,28 +61,36 @@ jobs:
       - name: Download arm64 DMG and compute SHA256
         if: steps.check.outputs.skip == 'false'
         id: sha_arm64
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          URL="https://github.com/koepalex/Crow-s-Nest-MQTT/releases/download/${VERSION}/crows-nest-mqtt-osx-arm64-${VERSION}.dmg"
-          echo "Downloading: $URL"
-          curl -fSL -o arm64.dmg "$URL"
-          HASH=$(sha256sum arm64.dmg | awk '{print $1}')
+          echo "Downloading arm64 DMG for version $VERSION..."
+          gh release download "$VERSION" \
+            --repo koepalex/Crow-s-Nest-MQTT \
+            --pattern "crows-nest-mqtt-osx-arm64-${VERSION}.dmg" \
+            --dir .
+          HASH=$(sha256sum "crows-nest-mqtt-osx-arm64-${VERSION}.dmg" | awk '{print $1}')
           echo "sha256=$HASH" >> "$GITHUB_OUTPUT"
           echo "arm64 SHA256: $HASH"
-          rm arm64.dmg
+          rm "crows-nest-mqtt-osx-arm64-${VERSION}.dmg"
 
       - name: Download x64 DMG and compute SHA256
         if: steps.check.outputs.skip == 'false'
         id: sha_x64
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          URL="https://github.com/koepalex/Crow-s-Nest-MQTT/releases/download/${VERSION}/crows-nest-mqtt-osx-x64-${VERSION}.dmg"
-          echo "Downloading: $URL"
-          curl -fSL -o x64.dmg "$URL"
-          HASH=$(sha256sum x64.dmg | awk '{print $1}')
+          echo "Downloading x64 DMG for version $VERSION..."
+          gh release download "$VERSION" \
+            --repo koepalex/Crow-s-Nest-MQTT \
+            --pattern "crows-nest-mqtt-osx-x64-${VERSION}.dmg" \
+            --dir .
+          HASH=$(sha256sum "crows-nest-mqtt-osx-x64-${VERSION}.dmg" | awk '{print $1}')
           echo "sha256=$HASH" >> "$GITHUB_OUTPUT"
           echo "x64 SHA256: $HASH"
-          rm x64.dmg
+          rm "crows-nest-mqtt-osx-x64-${VERSION}.dmg"
 
       - name: Update cask file
         if: steps.check.outputs.skip == 'false'
@@ -97,12 +106,27 @@ jobs:
           echo "Updated cask to version $VERSION"
           cat Casks/crowsnestmqtt.rb
 
-      - name: Commit and push
+      - name: Create pull request
         if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          BRANCH="bump-cask-${VERSION}"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add Casks/crowsnestmqtt.rb
           git commit -m "Bump crowsnestmqtt to ${VERSION}"
-          git push
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "Bump crowsnestmqtt to ${VERSION}" \
+            --body "Automated cask version bump to **${VERSION}**.
+
+          This PR was created automatically after a new release was published in [Crow-s-Nest-MQTT](https://github.com/koepalex/Crow-s-Nest-MQTT/releases/tag/${VERSION}).
+
+          **Merge this PR** once you have verified the release is published and the assets are publicly accessible." \
+            --base main \
+            --head "$BRANCH"
