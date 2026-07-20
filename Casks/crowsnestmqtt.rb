@@ -1,9 +1,9 @@
 cask "crowsnestmqtt" do
   arch arm: "arm64", intel: "x64"
 
-  version "1.0.1"
-  sha256 arm:   "751c497aaa6300c471043a18b6416afa74ecad338efe88f8022b05ada95d6383",
-         intel: "36c7075d810ef8983227d8c65b34e632094f4809fa2f4932d3c9c034e65b30da"
+  version "1.1.0"
+  sha256 arm:   "45f3b0987ca9362585365b2c3a893a9c5cbd0f0b68ba8504cff650c7f5883d36",
+         intel: "adc1ad57e1fb370fad7cdafe33c3531181c1c419e267d11cf547c9cd0b6f0d37"
 
   url "https://github.com/koepalex/Crow-s-Nest-MQTT/releases/download/#{version}/crows-nest-mqtt-osx-#{arch}-#{version}.dmg"
   name "Crow's Nest MQTT"
